@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passport Photo Fitter</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1c2333;
+            --border: #2d333b;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --danger: #f85149;
+            --success: #3fb950;
+            --warning: #d29922;
+            --slider-bg: #30363d;
+            --slider-fill: #58a6ff;
+            --radius: 10px;
+            --radius-sm: 6px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            --transition: 0.2s ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 16px 40px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #e6edf3 0%, #58a6ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--surface);
+            position: relative;
+            overflow: hidden;
+        }
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: var(--surface2);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+        }
+        .drop-zone.dragover {
+            transform: scale(1.01);
+        }
+        .drop-zone svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            color: var(--text-dim);
+            transition: var(--transition);
+        }
+        .drop-zone:hover svg,
+        .drop-zone.dragover svg {
+            color: var(--accent);
+            transform: translateY(-4px);
+        }
+        .drop-zone p {
+            font-size: 1rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+        .drop-zone .hint {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Mode Badge */
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .mode-badge.active {
+            border-color: var(--success);
+            color: var(--success);
+            background: rgba(63, 185, 80, 0.08);
+        }
+        .mode-badge.fallback {
+            border-color: var(--warning);
+            color: var(--warning);
+            background: rgba(210, 153, 34, 0.08);
+        }
+        .mode-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .preview-panel {
+            flex: 1 1 380px;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .controls-panel {
+            flex: 1 1 380px;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Preview Canvas */
+        .preview-wrap {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 300px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .preview-wrap canvas {
+            max-width: 100%;
+            max-height: 520px;
+            border-radius: var(--radius-sm);
+            display: block;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+        }
+        .preview-placeholder {
+            color: var(--text-dim);
+            text-align: center;
+            font-size: 0.95rem;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .preview-placeholder svg {
+            width: 64px;
+            height: 64px;
+            opacity: 0.5;
+        }
+
+        /* Fieldsets */
+        fieldset {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            background: var(--surface);
+            transition: var(--transition);
+        }
+        fieldset:hover {
+            border-color: #3d444d;
+        }
+        legend {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            padding: 0 8px;
+        }
+
+        /* Slider Groups */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .slider-group:last-child {
+            margin-bottom: 0;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .slider-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .slider-value {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--surface2);
+            border-radius: 4px;
+            padding: 2px 8px;
+            min-width: 48px;
+            text-align: center;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--slider-bg);
+            outline: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            transition: var(--transition);
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: var(--accent-hover);
+            transform: scale(1.1);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            transition: var(--transition);
+        }
+        input[type="range"]::-moz-range-thumb:hover {
+            background: var(--accent-hover);
+            transform: scale(1.1);
+        }
+        input[type="range"]::-moz-range-track {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--slider-bg);
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            transition: var(--transition);
+            text-decoration: none;
+            user-select: none;
+            flex: 1 1 auto;
+            min-width: 120px;
+            letter-spacing: 0.02em;
+        }
+        .btn:hover {
+            background: #252d3a;
+            border-color: #3d444d;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+        .btn-success {
+            background: #238636;
+            border-color: #2ea043;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #2ea043;
+            border-color: #3fb950;
+        }
+        .btn-outline {
+            background: transparent;
+            border-color: var(--border);
+        }
+        .btn-outline:hover {
+            background: var(--surface2);
+            border-color: #3d444d;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Status / Notifications */
+        .status-bar {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 4px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            .preview-panel,
+            .controls-panel {
+                flex: 1 1 auto;
+                min-width: 100%;
+            }
+            h1 {
+                font-size: 1.3rem;
+            }
+            .drop-zone {
+                padding: 28px 16px;
+            }
+            .preview-wrap canvas {
+                max-height: 380px;
+            }
+            fieldset {
+                padding: 12px 14px;
+            }
+        }
+        @media (max-width: 400px) {
+            .btn {
+                font-size: 0.8rem;
+                padding: 8px 14px;
+                min-width: 100px;
+            }
+            .preview-wrap canvas {
+                max-height: 300px;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+                margin: 0;
+                display: block;
+            }
+            .app-container,
+            .drop-zone,
+            .controls-panel,
+            .preview-panel,
+            .btn-row,
+            .status-bar,
+            .mode-badge,
+            .subtitle,
+            h1 {
+                display: none !important;
+            }
+            .print-sheet-container {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+            .print-sheet-container canvas {
+                width: 4in !important;
+                height: 6in !important;
+                display: block;
+            }
+        }
+        .print-sheet-container {
+            display: none;
+        }
+
+        @page {
+            size: 4in 6in;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Passport Photo Fitter</h1>
+    <p class="subtitle">35mm × 45mm · ICAO compliant · 4×6 sheet · 300 DPI</p>
+
+    <div class="app-container">
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            <p>Upload a portrait photo</p>
+            <p class="hint">Click or drag &amp; drop · JPG or PNG</p>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png" aria-label="Upload photo">
+        </div>
+
+        <!-- Mode Badge -->
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span class="mode-badge" id="modeBadge">
+                <span class="dot"></span>
+                <span id="modeText">Waiting for photo…</span>
+            </span>
+            <span class="status-bar" id="statusBar"></span>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Preview Panel -->
+            <div class="preview-panel">
+                <div class="preview-wrap" id="previewWrap">
+                    <div class="preview-placeholder" id="previewPlaceholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                        </svg>
+                        <p>No photo loaded yet</p>
+                        <p style="font-size:0.8rem;">Upload a portrait to see the preview</p>
+                    </div>
+                    <canvas id="previewCanvas" style="display:none;"></canvas>
+                </div>
+                <div class="btn-row" style="margin-top:4px;">
+                    <button class="btn btn-primary" id="btnPrint" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.055 48.055 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" /></svg>
+                        Print Sheet
+                    </button>
+                    <button class="btn btn-success" id="btnDownload" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                        Download JPEG
+                    </button>
+                </div>
+            </div>
+
+            <!-- Controls Panel -->
+            <div class="controls-panel">
+                <!-- Framing Fieldset -->
+                <fieldset>
+                    <legend>Framing</legend>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Zoom</span>
+                            <span class="slider-value" id="zoomVal">100%</span>
+                        </div>
+                        <input type="range" id="zoomSlider" min="50" max="200" value="100" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Head Size</span>
+                            <span class="slider-value" id="headSizeVal">75%</span>
+                        </div>
+                        <input type="range" id="headSizeSlider" min="60" max="90" value="75" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Move Horizontal</span>
+                            <span class="slider-value" id="moveXVal">0</span>
+                        </div>
+                        <input type="range" id="moveXSlider" min="-100" max="100" value="0" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Move Vertical</span>
+                            <span class="slider-value" id="moveYVal">0</span>
+                        </div>
+                        <input type="range" id="moveYSlider" min="-100" max="100" value="0" step="1">
+                    </div>
+                </fieldset>
+
+                <!-- Filters Fieldset -->
+                <fieldset>
+                    <legend>Filters</legend>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Brightness</span>
+                            <span class="slider-value" id="brightnessVal">100%</span>
+                        </div>
+                        <input type="range" id="brightnessSlider" min="0" max="200" value="100" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Contrast</span>
+                            <span class="slider-value" id="contrastVal">100%</span>
+                        </div>
+                        <input type="range" id="contrastSlider" min="0" max="200" value="100" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Saturation</span>
+                            <span class="slider-value" id="saturationVal">100%</span>
+                        </div>
+                        <input type="range" id="saturationSlider" min="0" max="200" value="100" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Warmth</span>
+                            <span class="slider-value" id="warmthVal">0</span>
+                        </div>
+                        <input type="range" id="warmthSlider" min="-100" max="100" value="0" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span class="slider-label">Sharpness</span>
+                            <span class="slider-value" id="sharpnessVal">0</span>
+                        </div>
+                        <input type="range" id="sharpnessSlider" min="0" max="100" value="0" step="1">
+                    </div>
+                    <div class="slider-group" style="margin-bottom:0;">
+                        <div class="slider-header">
+                            <span class="slider-label">Grayscale</span>
+                            <span class="slider-value" id="grayscaleVal">Off</span>
+                        </div>
+                        <input type="range" id="grayscaleSlider" min="0" max="100" value="0" step="1">
+                    </div>
+                </fieldset>
+
+                <!-- Reset Button -->
+                <button class="btn btn-outline" id="btnReset" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                    Reset All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden full-resolution canvas for output -->
+    <canvas id="sheetCanvas" width="1200" height="1800" style="display:none;"></canvas>
+
+    <!-- Hidden print container -->
+    <div class="print-sheet-container" id="printContainer"></div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ─── DOM Elements ───────────────────────────────────────────
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const previewCanvas = document.getElementById('previewCanvas');
+            const previewPlaceholder = document.getElementById('previewPlaceholder');
+            const sheetCanvas = document.getElementById('sheetCanvas');
+            const previewWrap = document.getElementById('previewWrap');
+            const modeBadge = document.getElementById('modeBadge');
+            const modeText = document.getElementById('modeText');
+            const statusBar = document.getElementById('statusBar');
+            const btnPrint = document.getElementById('btnPrint');
+            const btnDownload = document.getElementById('btnDownload');
+            const btnReset = document.getElementById('btnReset');
+            const printContainer = document.getElementById('printContainer');
+
+            // Sliders
+            const zoomSlider = document.getElementById('zoomSlider');
+            const headSizeSlider = document.getElementById('headSizeSlider');
+            const moveXSlider = document.getElementById('moveXSlider');
+            const moveYSlider = document.getElementById('moveYSlider');
+            const brightnessSlider = document.getElementById('brightnessSlider');
+            const contrastSlider = document.getElementById('contrastSlider');
+            const saturationSlider = document.getElementById('saturationSlider');
+            const warmthSlider = document.getElementById('warmthSlider');
+            const sharpnessSlider = document.getElementById('sharpnessSlider');
+            const grayscaleSlider = document.getElementById('grayscaleSlider');
+
+            // Slider value labels
+            const zoomVal = document.getElementById('zoomVal');
+            const headSizeVal = document.getElementById('headSizeVal');
+            const moveXVal = document.getElementById('moveXVal');
+            const moveYVal = document.getElementById('moveYVal');
+            const brightnessVal = document.getElementById('brightnessVal');
+            const contrastVal = document.getElementById('contrastVal');
+            const saturationVal = document.getElementById('saturationVal');
+            const warmthVal = document.getElementById('warmthVal');
+            const sharpnessVal = document.getElementById('sharpnessVal');
+            const grayscaleVal = document.getElementById('grayscaleVal');
+
+            // ─── Constants ──────────────────────────────────────────────
+            const PHOTO_W = 413; // pixels at 300 DPI for 35mm
+            const PHOTO_H = 531; // pixels at 300 DPI for 45mm
+            const SHEET_W = 1200; // 4" × 300 DPI
+            const SHEET_H = 1800; // 6" × 300 DPI
+            const SHEET_ASPECT = SHEET_W / SHEET_H;
+            const PHOTO_ASPECT = PHOTO_W / PHOTO_H;
+            const GAP_H = 124; // horizontal gap ~10.5mm
+            const GAP_H_MID = 126; // horizontal middle gap
+            const GAP_V = 246; // vertical gap ~20.8mm
+            const PHOTO1_X = GAP_H;
+            const PHOTO2_X = GAP_H + PHOTO_W + GAP_H_MID;
+            const PHOTO1_Y = GAP_V;
+            const PHOTO2_Y = GAP_V + PHOTO_H + GAP_V;
+            const CUT_GUIDE_PADDING = 8; // px outside photo boundary for cut guide
+            const CUT_GUIDE_COLOR = '#c8c8c8';
+            const CUT_GUIDE_WIDTH = 1.5;
+            const PHOTO_BORDER_COLOR = '#26363a';
+            const PHOTO_BORDER_WIDTH = 4;
+            const SHEET_BG_COLOR = '#ffffff';
+
+            // ─── State ──────────────────────────────────────────────────
+            let originalImage = null; // HTMLImageElement
+            let originalCanvas = null; // full original image drawn to canvas
+            let faceDetectionMode = 'none'; // 'facedetector' | 'heuristic' | 'none'
+            let faceData = null; // face bounding box info
+            let eyePositions = null; // eye landmark positions (if available)
+            let hasImage = false;
+
+            // Crop parameters
+            let cropX = 0;
+            let cropY = 0;
+            let cropW = 0;
+            let cropH = 0;
+            let baseCropX = 0;
+            let baseCropY = 0;
+            let baseCropW = 0;
+            let baseCropH = 0;
+
+            // Working canvas for single photo processing
+            const workCanvas = document.createElement('canvas');
+            workCanvas.width = PHOTO_W;
+            workCanvas.height = PHOTO_H;
+            const workCtx = workCanvas.getContext('2d', { willReadFrequently: true });
+
+            const filterCanvas = document.createElement('canvas');
+            filterCanvas.width = PHOTO_W;
+            filterCanvas.height = PHOTO_H;
+            const filterCtx = filterCanvas.getContext('2d', { willReadFrequently: true });
+
+            // ─── Default Values ─────────────────────────────────────────
+            const defaults = {
+                zoom: 100,
+                headSize: 75, // head occupies 75% of photo height (target 31.5–36mm of 45mm = 70–80%)
+                moveX: 0,
+                moveY: 0,
+                brightness: 100,
+                contrast: 100,
+                saturation: 100,
+                warmth: 0,
+                sharpness: 0,
+                grayscale: 0
+            };
+
+            let currentValues = { ...defaults };
+
+            // ─── Face Detection ─────────────────────────────────────────
+            function isFaceDetectorSupported() {
+                return typeof FaceDetector !== 'undefined';
+            }
+
+            async function detectFace(img) {
+                if (!isFaceDetectorSupported()) {
+                    return null;
+                }
+                try {
+                    const detector = new FaceDetector({
+                        maxDetectedFaces: 1,
+                        fastMode: true
+                    });
+                    const faces = await detector.detect(img);
+                    if (faces && faces.length > 0) {
+                        const face = faces[0];
+                        const bb = face.boundingBox;
+                        let eyes = null;
+                        // Try to get landmarks if available
+                        if (face.landmarks && face.landmarks.length > 0) {
+                            const eyeL = face.landmarks.find(l => l.type === 'eye' && l.locations &&
+                                l.locations.length > 0);
+                            const eyeR = face.landmarks.find(l => l.type === 'eye' && l.locations &&
+                                l.locations.length > 0 && l !== eyeL);
+                            if (eyeL && eyeR) {
+                                eyes = {
+                                    left: { x: eyeL.locations[0].x, y: eyeL.locations[0].y },
+                                    right: { x: eyeR.locations[0].x, y: eyeR.locations[0].y }
+                                };
+                            }
+                        }
+                        return {
+                            bbox: { x: bb.x, y: bb.y, w: bb.width, h: bb.height },
+                            eyes: eyes
+                        };
+                    }
+                    return null; // no face found
+                } catch (err) {
+                    console.warn('FaceDetector error:', err);
+                    return null;
+                }
+            }
+
+            function heuristicFaceEstimate(imgW, imgH) {
+                // Assume face/head is in center-upper portion (~40-50% from top)
+                const headH = imgH * 0.28; // approximate head height
+                const headW = headH * 0.75; // head width approx 75% of height
+                const cx = imgW * 0.5;
+                const cy = imgH * 0.42; // head center slightly above image center
+                const headTop = cy - headH * 0.45;
+                const headBottom = cy + headH * 0.55;
+                const faceLeft = cx - headW * 0.5;
+                const faceRight = cx + headW * 0.5;
+                return {
+                    bbox: {
+                        x: faceLeft,
+                        y: headTop + headH * 0.2,
+                        w: faceRight - faceLeft,
+                        h: headBottom - headTop - headH * 0.2
+                    },
+                    eyes: null,
+                    headTop: headTop,
+                    headBottom: headBottom,
+                    headCenterX: cx,
+                    headCenterY: cy,
+                    headHeight: headH
+                };
+            }
+
+            // ─── Crop Calculation ───────────────────────────────────────
+            function computeBaseCrop() {
+                if (!originalImage || !originalCanvas) return;
+                const imgW = originalCanvas.width;
+                const imgH = originalCanvas.height;
+
+                let faceInfo = null;
+                if (faceData && faceData.bbox) {
+                    faceInfo = faceData;
+                } else if (faceDetectionMode === 'heuristic') {
+                    faceInfo = heuristicFaceEstimate(imgW, imgH);
+                } else {
+                    // No face data — just use center crop
+                    const cropAspect = PHOTO_ASPECT;
+                    let ch = imgH * 0.85;
+                    let cw = ch * cropAspect;
+                    if (cw > imgW) {
+                        cw = imgW;
+                        ch = cw / cropAspect;
+                    }
+                    baseCropX = (imgW - cw) / 2;
+                    baseCropY = (imgH - ch) * 0.4;
+                    baseCropW = cw;
+                    baseCropH = ch;
+                    return;
+                }
+
+                const bbox = faceInfo.bbox;
+                const eyes = faceInfo.eyes;
+
+                // Estimate head dimensions
+                const faceH = bbox.h;
+                const faceW = bbox.w;
+                const faceCx = bbox.x + faceW / 2;
+                const faceCy = bbox.y + faceH / 2;
+
+                // Head extends ~15-20% above face bbox top
+                const headTopEst = bbox.y - faceH * 0.18;
+                const headBottomEst = bbox.y + faceH * 1.02; // chin at or near bbox bottom
+                const headHeightEst = headBottomEst - headTopEst;
+
+                // Target head proportion (from slider, default 75%)
+                const headProp = currentValues.headSize / 100;
+                const targetCropH = headHeightEst / headProp;
+                const targetCropW = targetCropH * PHOTO_ASPECT;
+
+                // Head center (chin to crown midpoint)
+                const headCenterY = (headTopEst + headBottomEst) / 2;
+                const headCenterX = faceCx;
+
+                // Position crop so head center is at ~46% of crop height (eyes in upper half)
+                const headCenterInCrop = 0.46;
+                const cropTopY = headCenterY - targetCropH * headCenterInCrop;
+                const cropLeftX = headCenterX - targetCropW / 2;
+
+                // Eye position refinement if available
+                if (eyes && eyes.left && eyes.right) {
+                    const eyeAvgY = (eyes.left.y + eyes.right.y) / 2;
+                    const eyeAvgX = (eyes.left.x + eyes.right.x) / 2;
+                    const eyeTargetInCrop = 0.42; // eyes at ~42% from top of crop
+                    const adjustedTopY = eyeAvgY - targetCropH * eyeTargetInCrop;
+                    // Blend between head-center based and eye-based positioning
+                    const blend = 0.7;
+                    const finalTopY = cropTopY * (1 - blend) + adjustedTopY * blend;
+                    const adjustedLeftX = eyeAvgX - targetCropW / 2;
+                    const finalLeftX = cropLeftX * (1 - blend) + adjustedLeftX * blend;
+                    baseCropX = finalLeftX;
+                    baseCropY = finalTopY;
+                } else {
+                    baseCropX = cropLeftX;
+                    baseCropY = cropTopY;
+                }
+                baseCropW = targetCropW;
+                baseCropH = targetCropH;
+
+                // Clamp to image bounds
+                clampCrop();
+            }
+
+            function clampCrop() {
+                if (!originalCanvas) return;
+                const imgW = originalCanvas.width;
+                const imgH = originalCanvas.height;
+
+                // Ensure crop dimensions don't exceed image
+                if (baseCropW > imgW) {
+                    const scale = imgW / baseCropW;
+                    baseCropW = imgW;
+                    baseCropH = baseCropH * scale;
+                }
+                if (baseCropH > imgH) {
+                    const scale = imgH / baseCropH;
+                    baseCropH = imgH;
+                    baseCropW = baseCropW * scale;
+                }
+
+                // Clamp position
+                baseCropX = Math.max(0, Math.min(baseCropX, imgW - baseCropW));
+                baseCropY = Math.max(0, Math.min(baseCropY, imgH - baseCropH));
+            }
+
+            function computeAdjustedCrop() {
+                if (!originalCanvas) return;
+                const imgW = originalCanvas.width;
+                const imgH = originalCanvas.height;
+
+                // Start from base crop
+                let cw = baseCropW;
+                let ch = baseCropH;
+                let cx = baseCropX;
+                let cy = baseCropY;
+
+                // Apply zoom
+                const zoomFactor = currentValues.zoom / 100;
+                const zoomScale = 1 / zoomFactor;
+                const newCw = cw * zoomScale;
+                const newCh = ch * zoomScale;
+                // Keep center fixed during zoom
+                cx = cx + (cw - newCw) / 2;
+                cy = cy + (ch - newCh) / 2;
+                cw = newCw;
+                ch = newCh;
+
+                // Apply move horizontal/vertical (in % of crop size)
+                const moveXAmount = (currentValues.moveX / 100) * cw * 0.5;
+                const moveYAmount = (currentValues.moveY / 100) * ch * 0.5;
+                cx += moveXAmount;
+                cy += moveYAmount;
+
+                // Clamp to image bounds
+                if (cw > imgW) {
+                    const scale = imgW / cw;
+                    cw = imgW;
+                    ch = ch * scale;
+                    cx = 0;
+                } else {
+                    cx = Math.max(0, Math.min(cx, imgW - cw));
+                }
+                if (ch > imgH) {
+                    const scale = imgH / ch;
+                    ch = imgH;
+                    cw = cw * scale;
+                    cy = 0;
+                } else {
+                    cy = Math.max(0, Math.min(cy, imgH - ch));
+                }
+
+                // Final clamp to ensure crop stays within bounds
+                cropW = Math.min(cw, imgW);
+                cropH = Math.min(ch, imgH);
+                cropX = Math.max(0, Math.min(cx, imgW - cropW));
+                cropY = Math.max(0, Math.min(cy, imgH - cropH));
+            }
+
+            // ─── Image Processing ───────────────────────────────────────
+            function buildCSSFilter() {
+                const b = currentValues.brightness;
+                const c = currentValues.contrast;
+                const s = currentValues.saturation;
+                const g = currentValues.grayscale;
+                const parts = [];
+                if (b !== 100) parts.push(`brightness(${b}%)`);
+                if (c !== 100) parts.push(`contrast(${c}%)`);
+                if (s !== 100) parts.push(`saturate(${s}%)`);
+                if (g > 0) parts.push(`grayscale(${g}%)`);
+                return parts.length > 0 ? parts.join(' ') : 'none';
+            }
+
+            function applyWarmthAndSharpness(imageData) {
+                const data = imageData.data;
+                const w = imageData.width;
+                const h = imageData.height;
+                const warmthAmt = currentValues.warmth / 100 * 40; // -40 to +40 range
+                const sharpAmt = currentValues.sharpness / 100 * 1.8; // 0 to 1.8
+
+                // If no warmth and no sharpening, skip
+                if (warmthAmt === 0 && sharpAmt === 0) return;
+
+                // Create a copy of the original data for convolution
+                const src = new Uint8ClampedArray(data);
+
+                // Precompute kernel
+                const k = sharpAmt;
+                const centerVal = 1 + 4 * k;
+                const neighborVal = -k;
+
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const idx = (y * w + x) * 4;
+                        let r = src[idx];
+                        let g = src[idx + 1];
+                        let b = src[idx + 2];
+
+                        // Apply warmth (adjust R and B channels)
+                        if (warmthAmt !== 0) {
+                            r += warmthAmt;
+                            b -= warmthAmt;
+                        }
+
+                        // Apply sharpening convolution (3x3 kernel)
+                        if (k > 0) {
+                            let sumR = 0,
+                                sumG = 0,
+                                sumB = 0;
+                            const xm1 = x > 0 ? x - 1 : 0;
+                            const xp1 = x < w - 1 ? x + 1 : w - 1;
+                            const ym1 = y > 0 ? y - 1 : 0;
+                            const yp1 = y < h - 1 ? y + 1 : h - 1;
+
+                            // Center
+                            const ci = (y * w + x) * 4;
+                            sumR += centerVal * src[ci];
+                            sumG += centerVal * src[ci + 1];
+                            sumB += centerVal * src[ci + 2];
+
+                            // Up
+                            const ui = (ym1 * w + x) * 4;
+                            sumR += neighborVal * src[ui];
+                            sumG += neighborVal * src[ui + 1];
+                            sumB += neighborVal * src[ui + 2];
+
+                            // Down
+                            const di = (yp1 * w + x) * 4;
+                            sumR += neighborVal * src[di];
+                            sumG += neighborVal * src[di + 1];
+                            sumB += neighborVal * src[di + 2];
+
+                            // Left
+                            const li = (y * w + xm1) * 4;
+                            sumR += neighborVal * src[li];
+                            sumG += neighborVal * src[li + 1];
+                            sumB += neighborVal * src[li + 2];
+
+                            // Right
+                            const ri = (y * w + xp1) * 4;
+                            sumR += neighborVal * src[ri];
+                            sumG += neighborVal * src[ri + 1];
+                            sumB += neighborVal * src[ri + 2];
+
+                            r = sumR;
+                            g = sumG;
+                            b = sumB;
+                        }
+
+                        // Clamp to 0-255 (Uint8ClampedArray handles this automatically)
+                        data[idx] = r;
+                        data[idx + 1] = g;
+                        data[idx + 2] = b;
+                        // Alpha stays unchanged
+                    }
+                }
+            }
+
+            function renderPhoto() {
+                if (!originalCanvas || !hasImage) return;
+
+                // Compute crop
+                computeAdjustedCrop();
+
+                // Draw cropped region to working canvas
+                workCtx.clearRect(0, 0, PHOTO_W, PHOTO_H);
+                workCtx.imageSmoothingEnabled = true;
+                workCtx.imageSmoothingQuality = 'high';
+                workCtx.drawImage(
+                    originalCanvas,
+                    cropX, cropY, cropW, cropH,
+                    0, 0, PHOTO_W, PHOTO_H
+                );
+
+                // Apply CSS filters
+                filterCtx.clearRect(0, 0, PHOTO_W, PHOTO_H);
+                const cssFilter = buildCSSFilter();
+                if (cssFilter !== 'none') {
+                    filterCtx.filter = cssFilter;
+                } else {
+                    filterCtx.filter = 'none';
+                }
+                filterCtx.drawImage(workCanvas, 0, 0);
+                filterCtx.filter = 'none';
+
+                // Get ImageData and apply warmth + sharpness
+                const imageData = filterCtx.getImageData(0, 0, PHOTO_W, PHOTO_H);
+                applyWarmthAndSharpness(imageData);
+                workCtx.putImageData(imageData, 0, 0);
+            }
+
+            function renderSheet() {
+                if (!hasImage || !originalCanvas) return;
+
+                renderPhoto();
+
+                const sctx = sheetCanvas.getContext('2d');
+                // Fill background
+                sctx.fillStyle = SHEET_BG_COLOR;
+                sctx.fillRect(0, 0, SHEET_W, SHEET_H);
+
+                // Draw 4 photos in 2×2 grid
+                const positions = [
+                    { x: PHOTO1_X, y: PHOTO1_Y },
+                    { x: PHOTO2_X, y: PHOTO1_Y },
+                    { x: PHOTO1_X, y: PHOTO2_Y },
+                    { x: PHOTO2_X, y: PHOTO2_Y }
+                ];
+
+                for (const pos of positions) {
+                    sctx.drawImage(workCanvas, pos.x, pos.y, PHOTO_W, PHOTO_H);
+                    sctx.strokeStyle = PHOTO_BORDER_COLOR;
+                    sctx.lineWidth = PHOTO_BORDER_WIDTH;
+                    sctx.setLineDash([]);
+                    sctx.strokeRect(
+                        pos.x + PHOTO_BORDER_WIDTH / 2,
+                        pos.y + PHOTO_BORDER_WIDTH / 2,
+                        PHOTO_W - PHOTO_BORDER_WIDTH,
+                        PHOTO_H - PHOTO_BORDER_WIDTH
+                    );
+                }
+
+                // Draw cut guides
+                sctx.strokeStyle = CUT_GUIDE_COLOR;
+                sctx.lineWidth = CUT_GUIDE_WIDTH;
+                sctx.setLineDash([6, 4]);
+                for (const pos of positions) {
+                    const gx = pos.x - CUT_GUIDE_PADDING;
+                    const gy = pos.y - CUT_GUIDE_PADDING;
+                    const gw = PHOTO_W + CUT_GUIDE_PADDING * 2;
+                    const gh = PHOTO_H + CUT_GUIDE_PADDING * 2;
+                    sctx.strokeRect(gx, gy, gw, gh);
+                }
+                sctx.setLineDash([]);
+            }
+
+            function updatePreview() {
+                if (!hasImage) return;
+                renderSheet();
+
+                // Draw to preview canvas, scaled to fit
+                const maxPreviewW = previewWrap.clientWidth - 40;
+                const maxPreviewH = 520;
+                const scale = Math.min(maxPreviewW / SHEET_W, maxPreviewH / SHEET_H);
+                const previewW = Math.round(SHEET_W * scale);
+                const previewH = Math.round(SHEET_H * scale);
+
+                previewCanvas.width = previewW;
+                previewCanvas.height = previewH;
+                const pctx = previewCanvas.getContext('2d');
+                pctx.imageSmoothingEnabled = true;
+                pctx.imageSmoothingQuality = 'high';
+                pctx.drawImage(sheetCanvas, 0, 0, previewW, previewH);
+
+                previewCanvas.style.display = 'block';
+                previewPlaceholder.style.display = 'none';
+            }
+
+            // ─── Slider Updates ─────────────────────────────────────────
+            function updateAllSliderLabels() {
+                zoomVal.textContent = `${currentValues.zoom}%`;
+                headSizeVal.textContent = `${currentValues.headSize}%`;
+                moveXVal.textContent = currentValues.moveX;
+                moveYVal.textContent = currentValues.moveY;
+                brightnessVal.textContent = `${currentValues.brightness}%`;
+                contrastVal.textContent = `${currentValues.contrast}%`;
+                saturationVal.textContent = `${currentValues.saturation}%`;
+                warmthVal.textContent = currentValues.warmth > 0 ? `+${currentValues.warmth}` : currentValues.warmth;
+                sharpnessVal.textContent = `${currentValues.sharpness}%`;
+                grayscaleVal.textContent = currentValues.grayscale > 0 ? `${currentValues.grayscale}%` : 'Off';
+            }
+
+            function syncSlidersToValues() {
+                zoomSlider.value = currentValues.zoom;
+                headSizeSlider.value = currentValues.headSize;
+                moveXSlider.value = currentValues.moveX;
+                moveYSlider.value = currentValues.moveY;
+                brightnessSlider.value = currentValues.brightness;
+                contrastSlider.value = currentValues.contrast;
+                saturationSlider.value = currentValues.saturation;
+                warmthSlider.value = currentValues.warmth;
+                sharpnessSlider.value = currentValues.sharpness;
+                grayscaleSlider.value = currentValues.grayscale;
+                updateAllSliderLabels();
+            }
+
+            function readSliders() {
+                currentValues.zoom = parseInt(zoomSlider.value, 10);
+                currentValues.headSize = parseInt(headSizeSlider.value, 10);
+                currentValues.moveX = parseInt(moveXSlider.value, 10);
+                currentValues.moveY = parseInt(moveYSlider.value, 10);
+                currentValues.brightness = parseInt(brightnessSlider.value, 10);
+                currentValues.contrast = parseInt(contrastSlider.value, 10);
+                currentValues.saturation = parseInt(saturationSlider.value, 10);
+                currentValues.warmth = parseInt(warmthSlider.value, 10);
+                currentValues.sharpness = parseInt(sharpnessSlider.value, 10);
+                currentValues.grayscale = parseInt(grayscaleSlider.value, 10);
+                updateAllSliderLabels();
+            }
+
+            // ─── Reset ──────────────────────────────────────────────────
+            function resetAll() {
+                currentValues = { ...defaults };
+                syncSlidersToValues();
+                if (hasImage) {
+                    computeBaseCrop();
+                    updatePreview();
+                }
+            }
+
+            // ─── Image Loading ──────────────────────────────────────────
+            function loadImage(file) {
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    showStatus('Please upload a valid image file (JPG or PNG).', true);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        originalImage = img;
+                        // Draw to original canvas for pixel access
+                        originalCanvas = document.createElement('canvas');
+                        originalCanvas.width = img.naturalWidth;
+                        originalCanvas.height = img.naturalHeight;
+                        const octx = originalCanvas.getContext('2d');
+                        octx.drawImage(img, 0, 0);
+
+                        hasImage = true;
+                        btnPrint.disabled = false;
+                        btnDownload.disabled = false;
+                        btnReset.disabled = false;
+
+                        // Detect face
+                        runFaceDetection();
+                    };
+                    img.onerror = () => {
+                        showStatus('Failed to load image. Please try another file.', true);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => {
+                    showStatus('Failed to read file.', true);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            async function runFaceDetection() {
+                if (!originalImage) return;
+                setModeBadge('detecting');
+                showStatus('Detecting face…');
+
+                const detected = await detectFace(originalImage);
+
+                if (detected && detected.bbox) {
+                    faceData = detected;
+                    eyePositions = detected.eyes;
+                    faceDetectionMode = 'facedetector';
+                    setModeBadge('facedetector');
+                    showStatus('Face detection active (FaceDetector API)');
+                } else if (isFaceDetectorSupported()) {
+                    // FaceDetector available but no face found — use heuristic
+                    faceData = null;
+                    eyePositions = null;
+                    faceDetectionMode = 'heuristic';
+                    setModeBadge('heuristic');
+                    showStatus('No face detected. Using smart center-crop heuristic.');
+                } else {
+                    faceData = null;
+                    eyePositions = null;
+                    faceDetectionMode = 'heuristic';
+                    setModeBadge('heuristic');
+                    showStatus('FaceDetector API not available. Using smart center-crop heuristic.');
+                }
+
+                computeBaseCrop();
+                updatePreview();
+            }
+
+            function setModeBadge(mode) {
+                modeBadge.className = 'mode-badge';
+                if (mode === 'facedetector') {
+                    modeBadge.classList.add('active');
+                    modeText.textContent = 'Face Detector API';
+                } else if (mode === 'heuristic') {
+                    modeBadge.classList.add('fallback');
+                    modeText.textContent = 'Heuristic Crop';
+                } else if (mode === 'detecting') {
+                    modeBadge.classList.add('active');
+                    modeText.textContent = 'Detecting…';
+                } else {
+                    modeText.textContent = 'Waiting for photo…';
+                }
+            }
+
+            function showStatus(msg, isError = false) {
+                statusBar.textContent = msg;
+                statusBar.style.color = isError ? 'var(--danger)' : 'var(--text-dim)';
+            }
+
+            // ─── Drop Zone Events ───────────────────────────────────────
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files && fileInput.files.length > 0) {
+                    loadImage(fileInput.files[0]);
+                }
+                fileInput.value = '';
+            });
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    loadImage(e.dataTransfer.files[0]);
+                }
+            });
+
+            // ─── Slider Events ──────────────────────────────────────────
+            function setupSlider(slider, key, onChange) {
+                slider.addEventListener('input', () => {
+                    readSliders();
+                    if (hasImage) {
+                        // Recompute base crop if head size changed (affects crop calc)
+                        if (key === 'headSize') {
+                            computeBaseCrop();
+                        }
+                        updatePreview();
+                    }
+                    if (onChange) onChange();
+                });
+            }
+
+            setupSlider(zoomSlider, 'zoom');
+            setupSlider(headSizeSlider, 'headSize');
+            setupSlider(moveXSlider, 'moveX');
+            setupSlider(moveYSlider, 'moveY');
+            setupSlider(brightnessSlider, 'brightness');
+            setupSlider(contrastSlider, 'contrast');
+            setupSlider(saturationSlider, 'saturation');
+            setupSlider(warmthSlider, 'warmth');
+            setupSlider(sharpnessSlider, 'sharpness');
+            setupSlider(grayscaleSlider, 'grayscale');
+
+            // ─── Reset Button ───────────────────────────────────────────
+            btnReset.addEventListener('click', resetAll);
+
+            // ─── Print ──────────────────────────────────────────────────
+            btnPrint.addEventListener('click', () => {
+                if (!hasImage) return;
+                renderSheet();
+
+                // Create print version
+                const printCanvas = document.createElement('canvas');
+                printCanvas.width = SHEET_W;
+                printCanvas.height = SHEET_H;
+                const pctx = printCanvas.getContext('2d');
+                pctx.drawImage(sheetCanvas, 0, 0);
+
+                // Add to print container
+                printContainer.innerHTML = '';
+                printContainer.appendChild(printCanvas);
+
+                // Trigger print
+                window.print();
+            });
+
+            // ─── Download ──────────────────────────────────────────────
+            btnDownload.addEventListener('click', () => {
+                if (!hasImage) return;
+                renderSheet();
+                sheetCanvas.toBlob((blob) => {
+                    if (!blob) {
+                        showStatus('Failed to generate JPEG.', true);
+                        return;
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'passport_photos_4x6_300dpi.jpg';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus('JPEG downloaded successfully.');
+                }, 'image/jpeg', 0.95);
+            });
+
+            // ─── Window Resize ──────────────────────────────────────────
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (hasImage) updatePreview();
+                }, 200);
+            });
+
+            // ─── Init ───────────────────────────────────────────────────
+            function init() {
+                syncSlidersToValues();
+                setModeBadge('none');
+                showStatus('Upload a photo to begin.');
+                // Check FaceDetector support proactively
+                if (isFaceDetectorSupported()) {
+                    console.log('FaceDetector API is available in this browser.');
+                } else {
+                    console.log('FaceDetector API is not available. Will use heuristic fallback.');
+                }
+            }
+
+            // Handle keyboard for drop zone
+            dropZone.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInput.click();
+                }
+            });
+            dropZone.setAttribute('tabindex', '0');
+            dropZone.setAttribute('role', 'button');
+            dropZone.setAttribute('aria-label', 'Upload a passport photo');
+
+            init();
+        })();
+    </script>
+</body>
+</html>
