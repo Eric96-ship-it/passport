@@ -22,8 +22,24 @@
             --radius: 10px;
             --radius-sm: 6px;
             --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --header-glow: rgba(88, 166, 255, 0.14);
             --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             --transition: 0.2s ease;
+        }
+
+        [data-theme="light"] {
+            --bg: #f3f7fb;
+            --surface: #ffffff;
+            --surface2: #eaf1f8;
+            --border: #c8d5e2;
+            --text: #182230;
+            --text-dim: #5f6f80;
+            --accent: #1769aa;
+            --accent-hover: #0e82d4;
+            --slider-bg: #d5e0ea;
+            --slider-fill: #1769aa;
+            --shadow: 0 4px 24px rgba(45, 75, 105, 0.12);
+            --header-glow: rgba(23, 105, 170, 0.12);
         }
 
         *,
@@ -45,6 +61,49 @@
             padding: 20px 16px 40px;
             line-height: 1.5;
             -webkit-font-smoothing: antialiased;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        .page-header {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 4px;
+        }
+
+        .page-title {
+            min-width: 0;
+        }
+
+        .theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            flex: 0 0 auto;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.8rem;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--header-glow);
+            transform: translateY(-1px);
+        }
+
+        .theme-toggle svg {
+            width: 16px;
+            height: 16px;
         }
 
         h1 {
@@ -56,6 +115,10 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+
+        [data-theme="light"] h1 {
+            background-image: linear-gradient(135deg, #182230 0%, #1769aa 100%);
         }
 
         .subtitle {
@@ -280,45 +343,73 @@
             width: 100%;
             height: 6px;
             border-radius: 3px;
-            background: var(--slider-bg);
+            background: linear-gradient(to right, var(--slider-color, var(--slider-fill)) 0%, var(--slider-color, var(--slider-fill)) var(--range-progress, 50%), var(--slider-bg) var(--range-progress, 50%), var(--slider-bg) 100%);
             outline: none;
             cursor: pointer;
             transition: var(--transition);
         }
+
+        input[type="range"]:focus-visible {
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--slider-color, var(--slider-fill)) 20%, transparent);
+        }
+
+        #zoomSlider, #headSizeSlider { --slider-color: #f59e0b; }
+        #moveXSlider, #moveYSlider { --slider-color: #ec4899; }
+        #brightnessSlider { --slider-color: #f97316; }
+        #contrastSlider { --slider-color: #8b5cf6; }
+        #saturationSlider { --slider-color: #14b8a6; }
+        #warmthSlider { --slider-color: #ef4444; }
+        #sharpnessSlider { --slider-color: #3b82f6; }
+        #grayscaleSlider { --slider-color: #64748b; }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: var(--accent);
+            background: var(--slider-color, var(--accent));
             cursor: pointer;
             border: 2px solid #fff;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
             transition: var(--transition);
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            background: var(--accent-hover);
+            filter: brightness(1.12);
             transform: scale(1.1);
         }
         input[type="range"]::-moz-range-thumb {
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: var(--accent);
+            background: var(--slider-color, var(--accent));
             cursor: pointer;
             border: 2px solid #fff;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
             transition: var(--transition);
         }
         input[type="range"]::-moz-range-thumb:hover {
-            background: var(--accent-hover);
+            filter: brightness(1.12);
             transform: scale(1.1);
         }
         input[type="range"]::-moz-range-track {
             height: 6px;
             border-radius: 3px;
             background: var(--slider-bg);
+        }
+
+        .page-footer {
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 22px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+            color: var(--text-dim);
+            font-size: 0.78rem;
+            text-align: center;
+        }
+
+        .page-footer strong {
+            color: var(--accent);
         }
 
         /* Buttons */
@@ -429,6 +520,12 @@
             }
         }
         @media (max-width: 400px) {
+            .page-header {
+                align-items: center;
+            }
+            .theme-toggle span {
+                display: none;
+            }
             .btn {
                 font-size: 0.8rem;
                 padding: 8px 14px;
@@ -484,8 +581,16 @@
 </head>
 <body>
 
-    <h1>Passport Photo Fitter</h1>
-    <p class="subtitle">35mm × 45mm · ICAO compliant · 4×6 sheet · 300 DPI</p>
+    <header class="page-header">
+        <div class="page-title">
+            <h1>Passport Photo Fitter</h1>
+            <p class="subtitle">35mm × 45mm · ICAO compliant · 4×6 sheet · 300 DPI</p>
+        </div>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light mode" aria-pressed="false">
+            <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m9-9h-2.25M5.25 12H3m15.364-6.364l-1.591 1.591M7.227 16.773l-1.591 1.591m12.728 0l-1.591-1.591M7.227 7.227L5.636 5.636M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
+            <span id="themeLabel">Light mode</span>
+        </button>
+    </header>
 
     <div class="app-container">
         <!-- Drop Zone -->
@@ -631,6 +736,8 @@
     <!-- Hidden print container -->
     <div class="print-sheet-container" id="printContainer"></div>
 
+    <footer class="page-footer">Made by <strong>Eric</strong></footer>
+
     <script>
         (function() {
             'use strict';
@@ -649,6 +756,9 @@
             const btnDownload = document.getElementById('btnDownload');
             const btnReset = document.getElementById('btnReset');
             const printContainer = document.getElementById('printContainer');
+            const themeToggle = document.getElementById('themeToggle');
+            const themeLabel = document.getElementById('themeLabel');
+            const themeIcon = document.getElementById('themeIcon');
 
             // Sliders
             const zoomSlider = document.getElementById('zoomSlider');
@@ -1188,6 +1298,7 @@
                 warmthSlider.value = currentValues.warmth;
                 sharpnessSlider.value = currentValues.sharpness;
                 grayscaleSlider.value = currentValues.grayscale;
+                [zoomSlider, headSizeSlider, moveXSlider, moveYSlider, brightnessSlider, contrastSlider, saturationSlider, warmthSlider, sharpnessSlider, grayscaleSlider].forEach(updateSliderProgress);
                 updateAllSliderLabels();
             }
 
@@ -1308,9 +1419,6 @@
             }
 
             // ─── Drop Zone Events ───────────────────────────────────────
-            dropZone.addEventListener('click', () => {
-                fileInput.click();
-            });
             fileInput.addEventListener('change', () => {
                 if (fileInput.files && fileInput.files.length > 0) {
                     loadImage(fileInput.files[0]);
@@ -1337,6 +1445,7 @@
             function setupSlider(slider, key, onChange) {
                 slider.addEventListener('input', () => {
                     readSliders();
+                    updateSliderProgress(slider);
                     if (hasImage) {
                         // Recompute base crop if head size changed (affects crop calc)
                         if (key === 'headSize') {
@@ -1346,6 +1455,26 @@
                     }
                     if (onChange) onChange();
                 });
+            }
+
+            function updateSliderProgress(slider) {
+                const min = Number(slider.min);
+                const max = Number(slider.max);
+                const value = Number(slider.value);
+                const progress = ((value - min) / (max - min)) * 100;
+                slider.style.setProperty('--range-progress', `${progress}%`);
+            }
+
+            function setTheme(theme) {
+                const isLight = theme === 'light';
+                document.documentElement.dataset.theme = isLight ? 'light' : 'dark';
+                themeLabel.textContent = isLight ? 'Dark mode' : 'Light mode';
+                themeToggle.setAttribute('aria-label', isLight ? 'Switch to dark mode' : 'Switch to light mode');
+                themeToggle.setAttribute('aria-pressed', String(isLight));
+                themeIcon.innerHTML = isLight
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9 9 0 1112.998 2.248 7.5 7.5 0 0021.752 15z" />'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m9-9h-2.25M5.25 12H3m15.364-6.364l-1.591 1.591M7.227 16.773l-1.591 1.591m12.728 0l-1.591-1.591M7.227 7.227L5.636 5.636M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />';
+                localStorage.setItem('passport-photo-theme', isLight ? 'light' : 'dark');
             }
 
             setupSlider(zoomSlider, 'zoom');
@@ -1358,6 +1487,11 @@
             setupSlider(warmthSlider, 'warmth');
             setupSlider(sharpnessSlider, 'sharpness');
             setupSlider(grayscaleSlider, 'grayscale');
+
+            [zoomSlider, headSizeSlider, moveXSlider, moveYSlider, brightnessSlider, contrastSlider, saturationSlider, warmthSlider, sharpnessSlider, grayscaleSlider].forEach(updateSliderProgress);
+            themeToggle.addEventListener('click', () => {
+                setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+            });
 
             // ─── Reset Button ───────────────────────────────────────────
             btnReset.addEventListener('click', resetAll);
@@ -1414,6 +1548,7 @@
 
             // ─── Init ───────────────────────────────────────────────────
             function init() {
+                setTheme(localStorage.getItem('passport-photo-theme') === 'light' ? 'light' : 'dark');
                 syncSlidersToValues();
                 setModeBadge('none');
                 showStatus('Upload a photo to begin.');
